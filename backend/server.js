@@ -18,6 +18,7 @@ import messageRoutes from './routes/messageRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
+import { ensureSeedData } from './config/seedData.js';
 
 dotenv.config();
 
@@ -44,7 +45,10 @@ app.use((req, _res, next) => {
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log('DB Connected'))
+  .then(async () => {
+    console.log('DB Connected');
+    await ensureSeedData();
+  })
   .catch((err) => console.log(err));
 
 io.on('connection', (socket) => {

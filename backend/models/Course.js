@@ -13,6 +13,7 @@ const courseSchema = mongoose.Schema(
   {
     title: { type: String, required: true },
     description: String,
+    videoUrl: String,
     coverImage: String,
     price: { type: Number, default: 0 },
     instructor: {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Users } from 'lucide-react';
+import { BookOpen, Users, Video } from 'lucide-react';
 import api from '../lib/api';
 
 const fallbackImage = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=900';
@@ -10,15 +10,17 @@ const CoursesPage = () => {
   const [enrolledIds, setEnrolledIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      setError('');
       const [courseRes, enrollRes] = await Promise.all([api.get('/courses'), api.get('/enrollments/my')]);
-      setCourses(courseRes.data || []);
+      setCourses(Array.isArray(courseRes.data) ? courseRes.data : []);
       setEnrolledIds(new Set((enrollRes.data || []).map((e) => e.course?._id)));
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Unable to load courses');
+      setError(err.response?.data?.message || 'Unable to load courses');
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,11 @@ const CoursesPage = () => {
       </div>
 
       {message && <p className="text-sm text-primary-600">{message}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
+      {courses.length === 0 ? (
+        <div className="card p-8 text-center text-gray-500">No courses available right now. Seed data or create new courses from admin panel.</div>
+      ) : (
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
         {courses.map((course) => {
           const isEnrolled = enrolledIds.has(course._id);
@@ -65,8 +71,9 @@ const CoursesPage = () => {
                   <span className="inline-flex items-center gap-1"><BookOpen size={16} /> {course.modules?.length || 0} modules</span>
                   <span className="inline-flex items-center gap-1"><Users size={16} /> {course.instructor?.name || 'Instructor'}</span>
                 </div>
+                <p className="text-xs text-primary-600 inline-flex items-center gap-1"><Video size={14} /> {course.videoUrl ? 'Video lesson included' : 'Module-level videos available'}</p>
                 <div className="flex gap-2 pt-2">
-                  <Link to={`/courses/${course._id}`} className="px-3 py-2 border rounded-lg text-sm">View</Link>
+                  <Link to={`/courses/${course._id}`} className="px-3 py-2 border rounded-lg text-sm">View Course</Link>
                   <button disabled={isEnrolled} onClick={() => handleEnroll(course._id)} className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed">
                     {isEnrolled ? 'Enrolled' : 'Enroll'}
                   </button>
@@ -76,6 +83,7 @@ const CoursesPage = () => {
           );
         })}
       </div>
+      )}
     </section>
   );
 };

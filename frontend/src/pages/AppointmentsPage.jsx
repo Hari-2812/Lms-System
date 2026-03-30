@@ -10,9 +10,11 @@ const AppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
   const fetchData = async () => {
     try {
+      setFetching(true);
       setMessage('');
       const [mentorRes, myAppointments] = await Promise.all([
         api.get('/users/mentors'),
@@ -27,6 +29,8 @@ const AppointmentsPage = () => {
       }
     } catch (err) {
       setMessage(err.response?.data?.message || 'Failed to load appointments');
+    } finally {
+      setFetching(false);
     }
   };
 
@@ -84,7 +88,7 @@ const AppointmentsPage = () => {
 
       <div className="card p-6">
         <h3 className="text-xl font-semibold mb-3">{user?.role === 'student' ? 'My Appointments' : 'Incoming Appointments'}</h3>
-        {appointments.length === 0 ? <p className="text-gray-500">No appointments yet.</p> : (
+        {fetching ? <p className="text-gray-500">Loading appointments...</p> : appointments.length === 0 ? <p className="text-gray-500">No appointments yet.</p> : (
           <div className="space-y-3">
             {appointments.map((appt) => (
               <div key={appt._id} className="border rounded-lg p-4 flex flex-wrap gap-4 justify-between items-center bg-gray-50">
