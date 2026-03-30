@@ -4,9 +4,9 @@ import Task from '../models/Task.js';
 import Job from '../models/Job.js';
 
 const defaultMentors = [
-  { name: 'Ava Mentor', email: 'ava.mentor@learnhub.dev', password: 'mentor123', role: 'mentor' },
-  { name: 'Liam Mentor', email: 'liam.mentor@learnhub.dev', password: 'mentor123', role: 'mentor' },
-  { name: 'Noah Mentor', email: 'noah.mentor@learnhub.dev', password: 'mentor123', role: 'mentor' },
+  { name: 'Frontend Mentor', email: 'ava.mentor@learnhub.dev', password: 'mentor123', role: 'mentor' },
+  { name: 'Backend Mentor', email: 'liam.mentor@learnhub.dev', password: 'mentor123', role: 'mentor' },
+  { name: 'FullStack Mentor', email: 'noah.mentor@learnhub.dev', password: 'mentor123', role: 'mentor' },
 ];
 
 const defaultCourses = [
