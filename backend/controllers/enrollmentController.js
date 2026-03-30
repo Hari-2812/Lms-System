@@ -35,7 +35,9 @@ export const enrollCourse = asyncHandler(async (req, res) => {
 });
 
 export const getMyCourses = asyncHandler(async (req, res) => {
-  const courses = await Enrollment.find({ student: req.user._id }).populate('course');
+  const courses = await Enrollment.find({ student: req.user._id })
+    .populate('course', 'title description videoUrl coverImage modules.title modules.duration instructor')
+    .lean();
   res.json(courses);
 });
 

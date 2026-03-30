@@ -4,6 +4,8 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import http from 'http';
 import { Server } from 'socket.io';
+import cookieParser from 'cookie-parser';
+import compression from 'compression';
 
 import authRoutes from './routes/authRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
@@ -17,32 +19,58 @@ import messageRoutes from './routes/messageRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
+import { ensureSeedData } from './config/seedData.js';
 
 dotenv.config();
 
 const app = express();
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (origin === CLIENT_URL) return callback(null, true);
+    return callback(null, false);
+  },
+  credentials: true,
+};
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || '*',
-    credentials: true,
-  },
+  cors: corsOptions,
 });
 
 app.use(express.json());
-app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
-  credentials: true,
-}));
+app.use(cookieParser());
+app.use(compression());
+app.use(cors(corsOptions));
 
 app.use((req, _res, next) => {
   req.io = io;
   next();
 });
 
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; connect-src 'self' ws: wss: http: https:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-src https://www.youtube.com https://youtube.com;"
+  );
+
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log('DB Connected'))
+  .then(async () => {
+    console.log('DB Connected');
+    await ensureSeedData();
+  })
   .catch((err) => console.log(err));
 
 io.on('connection', (socket) => {
@@ -69,5 +97,5 @@ app.use('/api/upload', uploadRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = Number(process.env.PORT) || 5000;
+server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));

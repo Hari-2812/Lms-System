@@ -1,29 +1,44 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Send, Bot } from 'lucide-react';
 import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:5000');
-
 const ChatPage = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [socketStatus, setSocketStatus] = useState('connecting');
+  const socketRef = useRef(null);
 
   const room = "global"; // you can make dynamic
 
   useEffect(() => {
-    socket.emit('join_room', room);
+    const socketUrl = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+    const socket = io(socketUrl, { transports: ['websocket', 'polling'] });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setSocketStatus('connected');
+      socket.emit('join_room', room);
+    });
+
+    socket.on('connect_error', () => {
+      setSocketStatus('error');
+    });
 
     socket.on('receive_message', (data) => {
       setMessages((prev) => [...prev, data]);
     });
 
-    return () => socket.off('receive_message');
-  }, []);
+    return () => {
+      socket.off('receive_message');
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [room]);
 
   const sendMessage = (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || socketStatus !== 'connected') return;
 
     const msgData = {
       room,
@@ -35,7 +50,7 @@ const ChatPage = () => {
       }),
     };
 
-    socket.emit('send_message', msgData);
+    socketRef.current?.emit('send_message', msgData);
     setMessages((prev) => [...prev, msgData]);
     setInput('');
   };
@@ -47,6 +62,7 @@ const ChatPage = () => {
       <div className="p-4 flex items-center gap-3 border-b">
         <Bot /> <h3>Live Chat</h3>
       </div>
+      {socketStatus === 'error' && <p className="text-sm text-red-600 px-4 py-2">Unable to connect chat server. Check backend/socket.io URL.</p>}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">

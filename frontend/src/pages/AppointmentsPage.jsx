@@ -1,7 +1,8 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useCallback } from 'react';
 import { CalendarDays, Clock3, CheckCircle } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../lib/api';
+import { getCachedValue, setCachedValue } from '../lib/cache';
 
 const AppointmentsPage = () => {
   const { user } = useContext(AuthContext);
@@ -10,27 +11,33 @@ const AppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
+      setFetching(true);
+      setMessage('');
+      const cachedMentors = getCachedValue('mentors', 120_000);
       const [mentorRes, myAppointments] = await Promise.all([
-        api.get('/users/mentors'),
+        cachedMentors ? Promise.resolve({ data: cachedMentors }) : api.get('/users/mentors'),
         api.get('/appointments/my'),
       ]);
 
-      setMentors(mentorRes.data || []);
+      const mentorsData = Array.isArray(mentorRes.data) ? mentorRes.data : [];
+      setMentors(mentorsData);
+      setCachedValue('mentors', mentorsData);
       setAppointments(myAppointments.data || []);
-      if (!form.mentor && mentorRes.data?.[0]?._id) {
-        setForm((prev) => ({ ...prev, mentor: mentorRes.data[0]._id }));
-      }
+      setForm((prev) => (prev.mentor || !mentorsData[0]?._id ? prev : { ...prev, mentor: mentorsData[0]._id }));
     } catch (err) {
       setMessage(err.response?.data?.message || 'Failed to load appointments');
+    } finally {
+      setFetching(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -50,8 +57,12 @@ const AppointmentsPage = () => {
   };
 
   const updateStatus = async (id, status) => {
-    await api.put(`/appointments/${id}/approve`, { status });
-    fetchData();
+    try {
+      await api.put(`/appointments/${id}/approve`, { status });
+      fetchData();
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Unable to update appointment');
+    }
   };
 
   return (
@@ -72,12 +83,13 @@ const AppointmentsPage = () => {
           <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Booking...' : 'Book Appointment'}</button>
         </form>
       )}
+      {user?.role === 'student' && mentors.length === 0 && <p className="text-sm text-amber-600">No mentors available yet. Please ask admin to create mentor accounts.</p>}
 
       {message && <p className="text-sm text-primary-600">{message}</p>}
 
       <div className="card p-6">
         <h3 className="text-xl font-semibold mb-3">{user?.role === 'student' ? 'My Appointments' : 'Incoming Appointments'}</h3>
-        {appointments.length === 0 ? <p className="text-gray-500">No appointments yet.</p> : (
+        {fetching ? <p className="text-gray-500">Loading appointments...</p> : appointments.length === 0 ? <p className="text-gray-500">No appointments yet.</p> : (
           <div className="space-y-3">
             {appointments.map((appt) => (
               <div key={appt._id} className="border rounded-lg p-4 flex flex-wrap gap-4 justify-between items-center bg-gray-50">

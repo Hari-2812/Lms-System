@@ -2,7 +2,10 @@ import asyncHandler from 'express-async-handler';
 import Course from '../models/Course.js';
 
 export const getCourses = asyncHandler(async (_req, res) => {
-  const courses = await Course.find().populate('instructor', 'name');
+  const courses = await Course.find()
+    .select('title description videoUrl coverImage price instructor modules.title modules.duration')
+    .populate('instructor', 'name')
+    .lean();
   res.json(courses);
 });
 
