@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import Appointment from '../models/Appointment.js';
+import User from '../models/User.js';
 
 export const bookAppointment = asyncHandler(async (req, res) => {
   const { mentor, date, time } = req.body;
@@ -7,6 +8,12 @@ export const bookAppointment = asyncHandler(async (req, res) => {
   if (!mentor || !date || !time) {
     res.status(400);
     throw new Error('mentor, date and time are required');
+  }
+
+  const mentorUser = await User.findById(mentor);
+  if (!mentorUser || !['mentor', 'admin'].includes(mentorUser.role)) {
+    res.status(400);
+    throw new Error('Invalid mentor selected');
   }
 
   const appt = await Appointment.create({

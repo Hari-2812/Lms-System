@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { Mail, Lock, UserPlus, User } from 'lucide-react';
-import axios from 'axios';
+import api from '../lib/api';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -13,14 +13,12 @@ const Register = () => {
 
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   const handleRegister = async (e) => {
     e.preventDefault();
     setError(null);
 
     try {
-      const { data } = await axios.post(`${API_URL}/api/auth/register`, {
+      const { data } = await api.post('/auth/register', {
         name,
         email,
         password,

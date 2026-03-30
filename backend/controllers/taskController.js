@@ -25,11 +25,12 @@ export const getMyTasks = asyncHandler(async (req, res) => {
 
   const tasks = await Task.find(query)
     .populate('assignedTo', 'name email')
+    .populate('submissions.student', 'name email')
     .sort({ createdAt: -1 });
 
   if (req.user.role === 'student') {
     const payload = tasks.map((task) => {
-      const mySubmission = task.submissions.find((sub) => sub.student.toString() === req.user._id.toString());
+      const mySubmission = task.submissions.find((sub) => sub.student._id.toString() === req.user._id.toString());
       return {
         ...task.toObject(),
         mySubmission: mySubmission || null,
@@ -44,10 +45,10 @@ export const getMyTasks = asyncHandler(async (req, res) => {
 });
 
 export const submitTaskSolution = asyncHandler(async (req, res) => {
-  const { fileUrl } = req.body;
-  if (!fileUrl) {
+  const { fileUrl, submissionText } = req.body;
+  if (!fileUrl && !submissionText) {
     res.status(400);
-    throw new Error('fileUrl is required');
+    throw new Error('Either fileUrl or submissionText is required');
   }
 
   const task = await Task.findById(req.params.id);
@@ -59,7 +60,8 @@ export const submitTaskSolution = asyncHandler(async (req, res) => {
   const existing = task.submissions.find((sub) => sub.student.toString() === req.user._id.toString());
 
   if (existing) {
-    existing.fileUrl = fileUrl;
+    existing.fileUrl = fileUrl || undefined;
+    existing.submissionText = submissionText || undefined;
     existing.status = 'pending';
     existing.feedback = undefined;
     existing.score = undefined;
@@ -67,6 +69,7 @@ export const submitTaskSolution = asyncHandler(async (req, res) => {
     task.submissions.push({
       student: req.user._id,
       fileUrl,
+      submissionText,
     });
   }
 

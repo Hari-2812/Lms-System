@@ -1,150 +1,117 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { AuthContext } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Users, BookOpen, Award, TrendingUp, Loader } from 'lucide-react';
+import { BookOpen, CheckCircle2, CalendarClock, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
+import api from '../lib/api';
 
-// 🔹 Stat Card Component
 const StatCard = ({ title, value, icon: Icon, delay }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.4 }}
+    transition={{ delay, duration: 0.35 }}
     className="card p-6 flex items-center gap-4"
   >
-    <div className="p-4 bg-primary-100 text-primary-600 rounded-2xl">
-      <Icon size={28} />
+    <div className="p-3 rounded-xl bg-primary-50 text-primary-600">
+      <Icon size={24} />
     </div>
     <div>
       <p className="text-sm text-gray-500">{title}</p>
-      <h3 className="text-3xl font-bold mt-1">{value}</h3>
+      <p className="text-2xl font-bold">{value}</p>
     </div>
   </motion.div>
 );
 
 const DashboardHome = () => {
   const { user } = useContext(AuthContext);
-
-  const [courses, setCourses] = useState([]); // enrollments
+  const [stats, setStats] = useState({ courses: 0, tasks: 0, appointments: 0 });
+  const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-  // 🔥 FETCH ENROLLED COURSES
   useEffect(() => {
-    const fetchMyCourses = async () => {
+    const fetchDashboard = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const [enrollRes, taskRes, appointmentRes] = await Promise.all([
+          api.get('/enrollments/my'),
+          api.get('/tasks/my-tasks'),
+          api.get('/appointments/my'),
+        ]);
 
-        const { data } = await axios.get(`${API_URL}/api/enrollments/my`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+        const enrollments = enrollRes.data || [];
+        const tasks = taskRes.data || [];
+        const appointments = appointmentRes.data || [];
+
+        setStats({
+          courses: enrollments.length,
+          tasks: tasks.length,
+          appointments: appointments.length,
         });
 
-        setCourses(data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || err.message);
+        const recent = [
+          ...enrollments.slice(0, 2).map((item) => ({
+            type: 'Enrollment',
+            title: item.course?.title || 'Course',
+            time: item.createdAt,
+          })),
+          ...tasks.slice(0, 2).map((item) => ({
+            type: 'Task',
+            title: item.title,
+            time: item.createdAt,
+          })),
+          ...appointments.slice(0, 2).map((item) => ({
+            type: 'Appointment',
+            title: `${item.date} ${item.time}`,
+            time: item.createdAt,
+          })),
+        ]
+          .sort((a, b) => new Date(b.time) - new Date(a.time))
+          .slice(0, 5);
+
+        setActivities(recent);
+      } finally {
         setLoading(false);
       }
     };
 
-    if (user?.role !== "admin") {
-      fetchMyCourses();
-    }
-  }, [user]);
+    fetchDashboard();
+  }, []);
 
-  // 🔥 ADMIN DASHBOARD
-  if (user?.role === 'admin') {
-    return (
-      <div className="space-y-8">
-        <div className="grid md:grid-cols-4 gap-6">
-          <StatCard title="Total Students" value="1248" icon={Users} delay={0.1} />
-          <StatCard title="Courses" value="24" icon={BookOpen} delay={0.2} />
-          <StatCard title="Tickets" value="12" icon={TrendingUp} delay={0.3} />
-          <StatCard title="Engagement" value="84%" icon={Award} delay={0.4} />
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <div className="text-center py-12">Loading dashboard...</div>;
   }
 
-  // 🔥 STUDENT DASHBOARD
   return (
     <div className="space-y-8">
+      <section className="card p-7 bg-gradient-to-r from-primary-600 to-indigo-600 text-white">
+        <h2 className="text-2xl font-bold">Hi {user?.name}, ready to learn today?</h2>
+        <p className="text-primary-100 mt-1">Track your courses, submit tasks, and manage mentor sessions in one place.</p>
+        <div className="mt-4 flex gap-3">
+          <Link to="/courses" className="px-4 py-2 bg-white text-primary-700 rounded-lg font-medium">Browse Courses</Link>
+          <Link to="/tasks" className="px-4 py-2 border border-white/40 rounded-lg font-medium">View Tasks</Link>
+        </div>
+      </section>
 
-      {/* 📊 STATS */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <StatCard title="Courses Enrolled" value={courses.length} icon={BookOpen} delay={0.1} />
-        <StatCard title="Pending Tasks" value="2" icon={TrendingUp} delay={0.2} />
-        <StatCard title="Total XP" value="2450" icon={Award} delay={0.3} />
-      </div>
+      <section className="grid md:grid-cols-3 gap-6">
+        <StatCard title="Courses" value={stats.courses} icon={BookOpen} delay={0.1} />
+        <StatCard title="Tasks" value={stats.tasks} icon={CheckCircle2} delay={0.2} />
+        <StatCard title="Appointments" value={stats.appointments} icon={CalendarClock} delay={0.3} />
+      </section>
 
-      {/* 📚 COURSES */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="card p-6"
-      >
-        <h3 className="text-xl font-bold mb-6">Continue Learning</h3>
-
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader className="animate-spin text-primary-500" />
-          </div>
-        ) : error ? (
-          <div className="p-4 bg-red-100 text-red-600 rounded-lg">
-            {error}
-          </div>
-        ) : courses.length === 0 ? (
-          <div className="text-center text-gray-500 p-8 border border-dashed rounded">
-            No enrolled courses yet.
-          </div>
+      <section className="card p-6">
+        <h3 className="text-xl font-semibold flex items-center gap-2"><Activity size={18} /> Recent Activities</h3>
+        {activities.length === 0 ? (
+          <p className="text-gray-500 mt-4">No recent activity yet.</p>
         ) : (
-          <div className="grid md:grid-cols-3 gap-6">
-            {courses.map((enroll, idx) => {
-              const course = enroll.course;
-              const progress = enroll.progress || 0;
-
-              const fallbackImage =
-                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600";
-
-              return (
-                <Link
-                  to={`/courses/${course._id}`}
-                  key={course._id || idx}
-                  className="group block"
-                >
-                  <div className="h-40 rounded-xl overflow-hidden mb-3">
-                    <img
-                      src={course.coverImage || fallbackImage}
-                      alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition"
-                    />
-                  </div>
-
-                  <h4 className="font-semibold">{course.title}</h4>
-
-                  {/* 🔥 REAL PROGRESS BAR */}
-                  <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
-                    <div
-                      className="bg-primary-500 h-full rounded-full transition-all"
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-
-                  <p className="text-xs text-right mt-1">
-                    {progress.toFixed(0)}% Complete
-                  </p>
-                </Link>
-              );
-            })}
-          </div>
+          <ul className="mt-4 space-y-3">
+            {activities.map((activity, idx) => (
+              <li key={`${activity.type}-${idx}`} className="p-3 rounded-lg bg-gray-50 border text-sm flex justify-between">
+                <span><strong>{activity.type}:</strong> {activity.title}</span>
+                <span className="text-gray-500">{new Date(activity.time).toLocaleString()}</span>
+              </li>
+            ))}
+          </ul>
         )}
-      </motion.div>
+      </section>
     </div>
   );
 };
