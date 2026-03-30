@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import Task from '../models/Task.js';
+import User from '../models/User.js';
 
 export const createTask = asyncHandler(async (req, res) => {
   const { title, description, dueDate, assignedTo = [] } = req.body;
@@ -9,11 +10,17 @@ export const createTask = asyncHandler(async (req, res) => {
     throw new Error('title, description and dueDate are required');
   }
 
+  let finalAssignedTo = Array.isArray(assignedTo) ? assignedTo : [];
+  if (finalAssignedTo.length === 0) {
+    const students = await User.find({ role: 'student' }).select('_id');
+    finalAssignedTo = students.map((student) => student._id);
+  }
+
   const task = await Task.create({
     title,
     description,
     dueDate,
-    assignedTo,
+    assignedTo: finalAssignedTo,
     createdBy: req.user._id,
   });
 

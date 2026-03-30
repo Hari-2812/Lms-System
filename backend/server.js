@@ -4,6 +4,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import http from 'http';
 import { Server } from 'socket.io';
+import cookieParser from 'cookie-parser';
 
 import authRoutes from './routes/authRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
@@ -17,6 +18,7 @@ import messageRoutes from './routes/messageRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
+import { ensureSeedData } from './config/seedData.js';
 
 dotenv.config();
 
@@ -30,6 +32,7 @@ const io = new Server(server, {
 });
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',
   credentials: true,
@@ -42,7 +45,10 @@ app.use((req, _res, next) => {
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log('DB Connected'))
+  .then(async () => {
+    console.log('DB Connected');
+    await ensureSeedData();
+  })
   .catch((err) => console.log(err));
 
 io.on('connection', (socket) => {
