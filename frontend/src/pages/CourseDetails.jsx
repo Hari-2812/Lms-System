@@ -4,21 +4,43 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, PlayCircle, Clock, BookOpen, Loader } from 'lucide-react';
 import api from '../lib/api';
 
+const CourseVideoPlayer = React.lazy(() => import('../components/CourseVideoPlayer'));
+
+const toEmbedUrl = (url = '') => {
+  if (!url) return '';
+  if (url.includes('youtube.com/watch?v=')) {
+    const videoId = new URL(url).searchParams.get('v');
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+  }
+  if (url.includes('youtu.be/')) {
+    const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+  }
+  return url;
+};
+
 const CourseDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [course, setCourse] = useState(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [enrolling, setEnrolling] = useState(false);
   const [message, setMessage] = useState('');
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const { data } = await api.get(`/courses/${id}`);
-        setCourse(data);
+        const [courseRes, enrollmentRes] = await Promise.all([
+          api.get(`/courses/${id}`),
+          api.get('/enrollments/my'),
+        ]);
+        setCourse(courseRes.data);
+        const enrolledCourseIds = new Set((enrollmentRes.data || []).map((item) => item.course?._id));
+        setIsEnrolled(enrolledCourseIds.has(id));
       } catch (err) {
         setError(err.response?.data?.message || err.message);
       } finally {
@@ -33,6 +55,7 @@ const CourseDetails = () => {
       setEnrolling(true);
       await api.post('/enrollments', { courseId: course._id });
       setMessage('🎉 Enrolled successfully!');
+      setIsEnrolled(true);
     } catch (err) {
       setMessage(err.response?.data?.message || 'Enrollment failed');
     } finally {
@@ -58,6 +81,7 @@ const CourseDetails = () => {
   }
 
   if (!course) return null;
+  const playableUrl = toEmbedUrl(course.videoUrl || course.modules?.[0]?.videoUrl || '');
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -77,7 +101,31 @@ const CourseDetails = () => {
 
         <div className="p-6 grid md:grid-cols-3 gap-8">
           <div className="md:col-span-2">
-            <h3 className="text-xl font-bold mb-4">Modules</h3>
+            <h3 className="text-xl font-bold mb-4">Course Video</h3>
+            {playableUrl ? (
+              <div className="rounded-xl overflow-hidden border bg-black">
+                {showVideoPlayer ? (
+                  <React.Suspense fallback={<div className="text-white text-center py-10">Loading video player...</div>}>
+                    <CourseVideoPlayer title={course.title} videoUrl={playableUrl} />
+                  </React.Suspense>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowVideoPlayer(true)}
+                    className="w-full aspect-video flex items-center justify-center text-white bg-black/80 hover:bg-black transition"
+                  >
+                    ▶ Load Video Player
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-500">No video is available for this course yet.</p>
+            )}
+            {!isEnrolled && playableUrl && (
+              <p className="text-sm text-amber-600 mt-2">Enroll in this course for full access and progress tracking.</p>
+            )}
+
+            <h3 className="text-xl font-bold mt-6 mb-4">Modules</h3>
             {course.modules?.length ? course.modules.map((mod, i) => (
               <div key={i} className="p-3 border rounded mb-2 flex gap-3">
                 <PlayCircle size={20} className="text-primary-500" />
@@ -95,8 +143,8 @@ const CourseDetails = () => {
               <p className="mb-2 inline-flex items-center gap-2 text-sm"><Clock size={14} /> Duration: Self-paced</p>
               <p className="mb-2 inline-flex items-center gap-2 text-sm"><BookOpen size={14} /> Modules: {course.modules?.length || 0}</p>
               <p className="mb-2 text-sm">Instructor: {course.instructor?.name || 'TBA'}</p>
-              <button onClick={enrollCourse} disabled={enrolling} className="btn-primary w-full mt-4">
-                {enrolling ? 'Enrolling...' : `Enroll - ${course.price === 0 ? 'Free' : `$${course.price}`}`}
+              <button onClick={enrollCourse} disabled={enrolling || isEnrolled} className="btn-primary w-full mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isEnrolled ? 'Already Enrolled' : enrolling ? 'Enrolling...' : `Enroll - ${course.price === 0 ? 'Free' : `$${course.price}`}`}
               </button>
               {message && <p className="text-sm mt-3 text-primary-600">{message}</p>}
             </div>

@@ -43,6 +43,7 @@ const EnrolledCoursesPage = () => {
             <div key={_id} className="card p-5 space-y-3">
               <h3 className="font-semibold text-lg">{course?.title}</h3>
               <p className="text-sm text-gray-600 line-clamp-2">{course?.description || 'No description available.'}</p>
+              <p className="text-xs text-primary-600">{course?.videoUrl ? '🎬 Includes video lesson' : '📚 Learning modules available'}</p>
               <div className="w-full h-2 rounded-full bg-gray-200">
                 <div className="h-2 rounded-full bg-primary-500" style={{ width: `${progress || 0}%` }} />
               </div>
