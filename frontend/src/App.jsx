@@ -9,27 +9,22 @@ import CourseDetails from './pages/CourseDetails';
 import TasksPage from './pages/TasksPage';
 import ChatPage from './pages/ChatPage';
 import AppointmentsPage from './pages/AppointmentsPage';
+import TicketsPage from './pages/TicketsPage';
+import JobsPage from './pages/JobsPage';
 
-// Higher order component for Protected Routes
 const ProtectedRoute = ({ children }) => {
   const { user } = React.useContext(AuthContext);
   if (!user) return <Navigate to="/login" replace />;
   return children;
 };
 
-// Main Layout Wrapping Modules
-const TasksPlaceholder = () => <div className="animate-fade-in"><h2 className="text-2xl font-bold dark:text-white">Active Tasks</h2></div>;
-
 function AppRoutes() {
   return (
     <Router>
       <Routes>
-
-        {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Dashboard */}
         <Route
           path="/"
           element={
@@ -43,18 +38,11 @@ function AppRoutes() {
           <Route path="tasks" element={<TasksPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="appointments" element={<AppointmentsPage />} />
+          <Route path="tickets" element={<TicketsPage />} />
+          <Route path="jobs" element={<JobsPage />} />
         </Route>
 
-        {/* 404 Page */}
-        <Route
-          path="*"
-          element={
-            <div className="text-white p-10 text-center">
-              404 - Page Not Found
-            </div>
-          }
-        />
-        
+        <Route path="*" element={<div className="text-white p-10 text-center">404 - Page Not Found</div>} />
       </Routes>
     </Router>
   );

@@ -1,8 +1,20 @@
-import Enrollment from "../models/Enrollment.js";
+import asyncHandler from 'express-async-handler';
+import Enrollment from '../models/Enrollment.js';
+import Course from '../models/Course.js';
 
-// ✅ Enroll in course
-export const enrollCourse = async (req, res) => {
+export const enrollCourse = asyncHandler(async (req, res) => {
   const { courseId } = req.body;
+
+  if (!courseId) {
+    res.status(400);
+    throw new Error('courseId is required');
+  }
+
+  const course = await Course.findById(courseId);
+  if (!course) {
+    res.status(404);
+    throw new Error('Course not found');
+  }
 
   const exists = await Enrollment.findOne({
     student: req.user._id,
@@ -10,7 +22,8 @@ export const enrollCourse = async (req, res) => {
   });
 
   if (exists) {
-    return res.status(400).json({ message: "Already enrolled" });
+    res.status(400);
+    throw new Error('Already enrolled');
   }
 
   const enrollment = await Enrollment.create({
@@ -19,37 +32,36 @@ export const enrollCourse = async (req, res) => {
   });
 
   res.status(201).json(enrollment);
-};
+});
 
-// ✅ Get my courses
-export const getMyCourses = async (req, res) => {
-  const courses = await Enrollment.find({ student: req.user._id })
-    .populate("course");
-
+export const getMyCourses = asyncHandler(async (req, res) => {
+  const courses = await Enrollment.find({ student: req.user._id }).populate('course');
   res.json(courses);
-};
+});
 
-// ✅ Update progress
-export const updateProgress = async (req, res) => {
+export const updateProgress = asyncHandler(async (req, res) => {
   const { moduleIndex } = req.body;
 
-  const enrollment = await Enrollment.findById(req.params.id);
+  const enrollment = await Enrollment.findById(req.params.id).populate('course');
 
   if (!enrollment) {
-    return res.status(404).json({ message: "Enrollment not found" });
+    res.status(404);
+    throw new Error('Enrollment not found');
   }
 
-  // Avoid duplicate
-  if (!enrollment.completedModules.includes(moduleIndex)) {
-    enrollment.completedModules.push(moduleIndex);
+  if (enrollment.student.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to update this enrollment');
   }
 
-  // Calculate progress
+  const hasModule = enrollment.completedModules.some((item) => item.moduleIndex === moduleIndex);
+  if (!hasModule) {
+    enrollment.completedModules.push({ moduleIndex });
+  }
+
   const totalModules = enrollment.course?.modules?.length || 1;
-  enrollment.progress =
-    (enrollment.completedModules.length / totalModules) * 100;
+  enrollment.progress = (enrollment.completedModules.length / totalModules) * 100;
 
   await enrollment.save();
-
   res.json(enrollment);
-};
+});

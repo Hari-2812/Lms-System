@@ -1,4 +1,13 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+
+const moduleSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    duration: String,
+    videoUrl: String,
+  },
+  { _id: false }
+);
 
 const courseSchema = mongoose.Schema(
   {
@@ -8,16 +17,11 @@ const courseSchema = mongoose.Schema(
     price: { type: Number, default: 0 },
     instructor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
-    modules: [
-      {
-        title: String,
-        duration: String,
-      },
-    ],
+    modules: [moduleSchema],
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Course", courseSchema);
+export default mongoose.model('Course', courseSchema);

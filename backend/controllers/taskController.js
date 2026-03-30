@@ -1,23 +1,99 @@
+import asyncHandler from 'express-async-handler';
 import Task from '../models/Task.js';
 
-export const createTask = async (req, res) => {
-  const task = await Task.create(req.body);
-  res.json(task);
-};
+export const createTask = asyncHandler(async (req, res) => {
+  const { title, description, dueDate, assignedTo = [] } = req.body;
 
-export const submitTask = async (req, res) => {
-  const task = await Task.findById(req.params.id);
+  if (!title || !description || !dueDate) {
+    res.status(400);
+    throw new Error('title, description and dueDate are required');
+  }
 
-  task.submissions.push({
-    student: req.user._id,
-    file: req.body.file
+  const task = await Task.create({
+    title,
+    description,
+    dueDate,
+    assignedTo,
+    createdBy: req.user._id,
   });
 
-  await task.save();
-  res.json(task);
-};
+  res.status(201).json(task);
+});
 
-export const getTasks = async (req, res) => {
-  const tasks = await Task.find();
+export const getMyTasks = asyncHandler(async (req, res) => {
+  const query = req.user.role === 'student' ? { assignedTo: req.user._id } : { createdBy: req.user._id };
+
+  const tasks = await Task.find(query)
+    .populate('assignedTo', 'name email')
+    .sort({ createdAt: -1 });
+
+  if (req.user.role === 'student') {
+    const payload = tasks.map((task) => {
+      const mySubmission = task.submissions.find((sub) => sub.student.toString() === req.user._id.toString());
+      return {
+        ...task.toObject(),
+        mySubmission: mySubmission || null,
+      };
+    });
+
+    res.json(payload);
+    return;
+  }
+
   res.json(tasks);
-};
+});
+
+export const submitTaskSolution = asyncHandler(async (req, res) => {
+  const { fileUrl } = req.body;
+  if (!fileUrl) {
+    res.status(400);
+    throw new Error('fileUrl is required');
+  }
+
+  const task = await Task.findById(req.params.id);
+  if (!task) {
+    res.status(404);
+    throw new Error('Task not found');
+  }
+
+  const existing = task.submissions.find((sub) => sub.student.toString() === req.user._id.toString());
+
+  if (existing) {
+    existing.fileUrl = fileUrl;
+    existing.status = 'pending';
+    existing.feedback = undefined;
+    existing.score = undefined;
+  } else {
+    task.submissions.push({
+      student: req.user._id,
+      fileUrl,
+    });
+  }
+
+  await task.save();
+  res.json({ message: 'Submission saved successfully' });
+});
+
+export const evaluateSubmission = asyncHandler(async (req, res) => {
+  const { score, feedback } = req.body;
+
+  const task = await Task.findById(req.params.id);
+  if (!task) {
+    res.status(404);
+    throw new Error('Task not found');
+  }
+
+  const submission = task.submissions.id(req.params.submissionId);
+  if (!submission) {
+    res.status(404);
+    throw new Error('Submission not found');
+  }
+
+  submission.score = score;
+  submission.feedback = feedback;
+  submission.status = 'evaluated';
+
+  await task.save();
+
+  res.json({ message: 'Submission evaluated', submission });
+});
