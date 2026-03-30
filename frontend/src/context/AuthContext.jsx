@@ -8,9 +8,14 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem('token');
 
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      if (parsedUser?.token && !storedToken) {
+        localStorage.setItem('token', parsedUser.token);
+      }
+      setUser(parsedUser);
     }
 
     setLoading(false);
@@ -18,7 +23,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = (data) => {
     localStorage.setItem("user", JSON.stringify(data));
-    localStorage.setItem("token", data.token);
+    if (data?.token) {
+      localStorage.setItem("token", data.token);
+    }
     setUser(data);
   };
 

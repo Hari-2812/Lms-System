@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 
 const TicketsPage = () => {
   const [question, setQuestion] = useState('');
   const [tickets, setTickets] = useState([]);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const token = localStorage.getItem('token');
+  const [error, setError] = useState('');
 
   const fetchTickets = async () => {
-    const { data } = await axios.get(`${API_URL}/api/tickets/my-tickets`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setTickets(data || []);
+    try {
+      setError('');
+      const { data } = await api.get('/tickets/my-tickets');
+      setTickets(data || []);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load tickets');
+    }
   };
 
   useEffect(() => {
@@ -22,16 +24,20 @@ const TicketsPage = () => {
     e.preventDefault();
     if (!question.trim()) return;
 
-    await axios.post(`${API_URL}/api/tickets`, { question }, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setQuestion('');
-    fetchTickets();
+    try {
+      setError('');
+      await api.post('/tickets', { question });
+      setQuestion('');
+      fetchTickets();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to raise ticket');
+    }
   };
 
   return (
     <div className="space-y-5">
       <h2 className="text-2xl font-bold">Doubt Clarification Tickets</h2>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <form onSubmit={createTicket} className="space-y-2">
         <textarea value={question} onChange={(e) => setQuestion(e.target.value)} className="w-full border rounded p-3" placeholder="Write your doubt..." />
         <button className="bg-blue-600 text-white px-4 py-2 rounded">Raise Ticket</button>
