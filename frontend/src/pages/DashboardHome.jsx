@@ -27,19 +27,25 @@ const DashboardHome = () => {
   const [stats, setStats] = useState({ courses: 0, tasks: 0, appointments: 0 });
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const [enrollRes, taskRes, appointmentRes] = await Promise.all([
+        setError('');
+        const [enrollRes, taskRes, appointmentRes] = await Promise.allSettled([
           api.get('/enrollments/my'),
           api.get('/tasks/my-tasks'),
           api.get('/appointments/my'),
         ]);
 
-        const enrollments = enrollRes.data || [];
-        const tasks = taskRes.data || [];
-        const appointments = appointmentRes.data || [];
+        const enrollments = enrollRes.status === 'fulfilled' ? enrollRes.value.data || [] : [];
+        const tasks = taskRes.status === 'fulfilled' ? taskRes.value.data || [] : [];
+        const appointments = appointmentRes.status === 'fulfilled' ? appointmentRes.value.data || [] : [];
+
+        if ([enrollRes, taskRes, appointmentRes].some((item) => item.status === 'rejected')) {
+          setError('Some dashboard sections could not be loaded. Please refresh.');
+        }
 
         setStats({
           courses: enrollments.length,
@@ -96,6 +102,8 @@ const DashboardHome = () => {
         <StatCard title="Tasks" value={stats.tasks} icon={CheckCircle2} delay={0.2} />
         <StatCard title="Appointments" value={stats.appointments} icon={CalendarClock} delay={0.3} />
       </section>
+
+      {error && <p className="text-sm text-amber-600">{error}</p>}
 
       <section className="card p-6">
         <h3 className="text-xl font-semibold flex items-center gap-2"><Activity size={18} /> Recent Activities</h3>

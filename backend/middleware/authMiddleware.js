@@ -3,11 +3,17 @@ import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
 
 export const protect = asyncHandler(async (req, res, next) => {
-  let token;
+  let token = null;
 
-  if (req.headers.authorization?.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+  if (req.headers.authorization) {
+    const [scheme, credentials] = req.headers.authorization.split(' ');
+    if (scheme?.toLowerCase() === 'bearer' && credentials) {
+      token = credentials;
+    }
   }
+
+  if (!token && req.cookies?.jwt) token = req.cookies.jwt;
+  if (!token && req.headers['x-auth-token']) token = req.headers['x-auth-token'];
 
   if (!token) {
     res.status(401);

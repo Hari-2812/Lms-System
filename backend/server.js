@@ -4,6 +4,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import http from 'http';
 import { Server } from 'socket.io';
+import cookieParser from 'cookie-parser';
 
 import authRoutes from './routes/authRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
@@ -30,6 +31,7 @@ const io = new Server(server, {
 });
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',
   credentials: true,

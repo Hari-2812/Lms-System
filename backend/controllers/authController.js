@@ -1,16 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
-import jwt from 'jsonwebtoken';
-
-const generateToken = (id) => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is not configured');
-  }
-
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '7d',
-  });
-};
+import generateToken from '../utils/generateToken.js';
 
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role } = req.body;
@@ -48,7 +38,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     role: user.role,
-    token: generateToken(user._id),
+    token: generateToken(res, user._id),
   });
 });
 
@@ -69,7 +59,7 @@ export const authUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id),
+      token: generateToken(res, user._id),
     });
   } else {
     res.status(401);

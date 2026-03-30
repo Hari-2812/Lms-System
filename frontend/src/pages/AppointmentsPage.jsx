@@ -13,15 +13,17 @@ const AppointmentsPage = () => {
 
   const fetchData = async () => {
     try {
+      setMessage('');
       const [mentorRes, myAppointments] = await Promise.all([
         api.get('/users/mentors'),
         api.get('/appointments/my'),
       ]);
 
-      setMentors(mentorRes.data || []);
+      const mentorsData = Array.isArray(mentorRes.data) ? mentorRes.data : [];
+      setMentors(mentorsData);
       setAppointments(myAppointments.data || []);
-      if (!form.mentor && mentorRes.data?.[0]?._id) {
-        setForm((prev) => ({ ...prev, mentor: mentorRes.data[0]._id }));
+      if (!form.mentor && mentorsData[0]?._id) {
+        setForm((prev) => ({ ...prev, mentor: mentorsData[0]._id }));
       }
     } catch (err) {
       setMessage(err.response?.data?.message || 'Failed to load appointments');
@@ -50,8 +52,12 @@ const AppointmentsPage = () => {
   };
 
   const updateStatus = async (id, status) => {
-    await api.put(`/appointments/${id}/approve`, { status });
-    fetchData();
+    try {
+      await api.put(`/appointments/${id}/approve`, { status });
+      fetchData();
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Unable to update appointment');
+    }
   };
 
   return (
@@ -72,6 +78,7 @@ const AppointmentsPage = () => {
           <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Booking...' : 'Book Appointment'}</button>
         </form>
       )}
+      {user?.role === 'student' && mentors.length === 0 && <p className="text-sm text-amber-600">No mentors available yet. Please ask admin to create mentor accounts.</p>}
 
       {message && <p className="text-sm text-primary-600">{message}</p>}
 
