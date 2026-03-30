@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Course from '../models/Course.js';
 import Task from '../models/Task.js';
+import Job from '../models/Job.js';
 
 const defaultMentors = [
   { name: 'Ava Mentor', email: 'ava.mentor@learnhub.dev', password: 'mentor123', role: 'mentor' },
@@ -53,6 +54,33 @@ const defaultCourses = [
   },
 ];
 
+const defaultJobs = [
+  {
+    title: 'Frontend Developer Intern',
+    company: 'LearnHub Labs',
+    description: 'Work on React UI, accessibility, and performance improvements for LMS products.',
+    applyLink: 'https://example.com/jobs/frontend-intern',
+  },
+  {
+    title: 'Backend Developer Intern',
+    company: 'SkillForge Tech',
+    description: 'Build and maintain Node/Express APIs, authentication, and database integrations.',
+    applyLink: 'https://example.com/jobs/backend-intern',
+  },
+  {
+    title: 'Full Stack Developer',
+    company: 'EdScale Systems',
+    description: 'Own end-to-end features across MERN stack modules for learning platforms.',
+    applyLink: 'https://example.com/jobs/fullstack-developer',
+  },
+  {
+    title: 'MERN Trainee Engineer',
+    company: 'CodeBridge Academy',
+    description: 'Hands-on role focused on API integration, bug fixing, and feature delivery.',
+    applyLink: 'https://example.com/jobs/mern-trainee',
+  },
+];
+
 export const ensureSeedData = async () => {
   const mentorCount = await User.countDocuments({ role: 'mentor' });
   if (mentorCount === 0) {
@@ -99,5 +127,10 @@ export const ensureSeedData = async () => {
       console.log('Seeded tasks');
     }
   }
-};
 
+  const jobCount = await Job.countDocuments();
+  if (jobCount === 0) {
+    await Job.insertMany(defaultJobs);
+    console.log('Seeded jobs');
+  }
+};

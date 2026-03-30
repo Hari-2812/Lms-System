@@ -24,21 +24,24 @@ import { ensureSeedData } from './config/seedData.js';
 dotenv.config();
 
 const app = express();
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (origin === CLIENT_URL) return callback(null, true);
+    return callback(null, false);
+  },
+  credentials: true,
+};
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || '*',
-    credentials: true,
-  },
+  cors: corsOptions,
 });
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(compression());
-app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
-  credentials: true,
-}));
+app.use(cors(corsOptions));
 
 app.use((req, _res, next) => {
   req.io = io;
@@ -94,5 +97,5 @@ app.use('/api/upload', uploadRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = Number(process.env.PORT) || 5000;
+server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));

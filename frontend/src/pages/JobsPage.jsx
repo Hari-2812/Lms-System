@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 
 const JobsPage = () => {
   const [jobs, setJobs] = useState([]);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchJobs = async () => {
-      const { data } = await axios.get(`${API_URL}/api/jobs`);
-      setJobs(data || []);
+      try {
+        setError('');
+        const { data } = await api.get('/jobs');
+        setJobs(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to load jobs');
+      } finally {
+        setLoading(false);
+      }
     };
     fetchJobs();
   }, []);
@@ -16,11 +24,14 @@ const JobsPage = () => {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Job / Internship Updates</h2>
-      {jobs.length === 0 ? <p>No updates available.</p> : jobs.map((job) => (
-        <a className="block p-4 border rounded hover:bg-gray-50" href={job.link} key={job._id} target="_blank" rel="noreferrer">
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading ? <p>Loading jobs...</p> : jobs.length === 0 ? <p>No updates available.</p> : jobs.map((job) => (
+        <article className="p-4 border rounded hover:bg-gray-50 space-y-2" key={job._id}>
           <p className="font-semibold">{job.title}</p>
           <p className="text-sm text-gray-600">{job.company}</p>
-        </a>
+          <p className="text-sm text-gray-700">{job.description}</p>
+          <a className="inline-block px-3 py-1 rounded bg-blue-600 text-white text-sm" href={job.applyLink || job.link || '#'} target="_blank" rel="noreferrer">Apply Now</a>
+        </article>
       ))}
     </div>
   );
