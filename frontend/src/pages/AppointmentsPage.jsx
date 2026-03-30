@@ -1,25 +1,30 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useEffect, useState, useContext } from 'react';
+import { CalendarDays, Clock3, CheckCircle } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import api from '../lib/api';
 
 const AppointmentsPage = () => {
+  const { user } = useContext(AuthContext);
   const [form, setForm] = useState({ mentor: '', date: '', time: '' });
   const [mentors, setMentors] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const token = localStorage.getItem('token');
 
   const fetchData = async () => {
-    const [mentorRes, myAppointments] = await Promise.all([
-      axios.get(`${API_URL}/api/users/mentors`),
-      axios.get(`${API_URL}/api/appointments/my`, { headers: { Authorization: `Bearer ${token}` } }),
-    ]);
+    try {
+      const [mentorRes, myAppointments] = await Promise.all([
+        api.get('/users/mentors'),
+        api.get('/appointments/my'),
+      ]);
 
-    setMentors(mentorRes.data || []);
-    setAppointments(myAppointments.data || []);
-    if (!form.mentor && mentorRes.data?.[0]?._id) {
-      setForm((prev) => ({ ...prev, mentor: mentorRes.data[0]._id }));
+      setMentors(mentorRes.data || []);
+      setAppointments(myAppointments.data || []);
+      if (!form.mentor && mentorRes.data?.[0]?._id) {
+        setForm((prev) => ({ ...prev, mentor: mentorRes.data[0]._id }));
+      }
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Failed to load appointments');
     }
   };
 
@@ -33,9 +38,7 @@ const AppointmentsPage = () => {
 
     try {
       setLoading(true);
-      await axios.post(`${API_URL}/api/appointments`, form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.post('/appointments', form);
       setMessage('Appointment booked successfully');
       setForm((prev) => ({ ...prev, date: '', time: '' }));
       await fetchData();
@@ -46,31 +49,55 @@ const AppointmentsPage = () => {
     }
   };
 
+  const updateStatus = async (id, status) => {
+    await api.put(`/appointments/${id}/approve`, { status });
+    fetchData();
+  };
+
   return (
-    <div className="p-8 text-white space-y-6">
-      <h2 className="text-2xl font-bold">Book Appointment</h2>
-      <form onSubmit={submitHandler} className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md space-y-4">
-        <div>
-          <label className="block mb-1">Select Mentor</label>
-          <select className="w-full p-2 bg-gray-700 rounded" value={form.mentor} onChange={(e) => setForm({ ...form, mentor: e.target.value })}>
+    <div className="space-y-8 max-w-6xl mx-auto">
+      <div>
+        <h2 className="text-3xl font-bold">Appointment Booking</h2>
+        <p className="text-gray-500">Schedule 1:1 sessions with mentors and track approvals.</p>
+      </div>
+
+      {user?.role === 'student' && (
+        <form onSubmit={submitHandler} className="card p-6 grid md:grid-cols-4 gap-4">
+          <select className="input-field" value={form.mentor} onChange={(e) => setForm({ ...form, mentor: e.target.value })} required>
+            <option value="">Select mentor</option>
             {mentors.map((mentor) => <option key={mentor._id} value={mentor._id}>{mentor.name}</option>)}
           </select>
-        </div>
-        <div><label className="block mb-1">Date</label><input type="date" value={form.date} className="w-full p-2 bg-gray-700 rounded" onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
-        <div><label className="block mb-1">Time</label><input type="time" value={form.time} className="w-full p-2 bg-gray-700 rounded" onChange={(e) => setForm({ ...form, time: e.target.value })} /></div>
-        <button type="submit" disabled={loading} className="w-full p-2 rounded bg-blue-500 hover:bg-blue-600">{loading ? 'Booking...' : 'Book Appointment'}</button>
-        {message && <p className="text-center mt-2 text-green-400">{message}</p>}
-      </form>
+          <input type="date" min={new Date().toISOString().split('T')[0]} value={form.date} className="input-field" onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+          <input type="time" value={form.time} className="input-field" onChange={(e) => setForm({ ...form, time: e.target.value })} required />
+          <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Booking...' : 'Book Appointment'}</button>
+        </form>
+      )}
 
-      <div className="bg-gray-900 p-4 rounded-lg">
-        <h3 className="text-xl font-semibold mb-2">My Appointments</h3>
-        {appointments.length === 0 ? <p className="text-gray-400">No appointments yet.</p> : (
-          appointments.map((appt) => (
-            <div key={appt._id} className="border-b border-gray-700 py-2">
-              <p>{appt.date} {appt.time} with {appt.mentor?.name}</p>
-              <p className="text-sm text-gray-400">Status: {appt.status} {appt.meetLink ? `| Meet: ${appt.meetLink}` : ''}</p>
-            </div>
-          ))
+      {message && <p className="text-sm text-primary-600">{message}</p>}
+
+      <div className="card p-6">
+        <h3 className="text-xl font-semibold mb-3">{user?.role === 'student' ? 'My Appointments' : 'Incoming Appointments'}</h3>
+        {appointments.length === 0 ? <p className="text-gray-500">No appointments yet.</p> : (
+          <div className="space-y-3">
+            {appointments.map((appt) => (
+              <div key={appt._id} className="border rounded-lg p-4 flex flex-wrap gap-4 justify-between items-center bg-gray-50">
+                <div className="space-y-1">
+                  <p className="font-medium inline-flex items-center gap-2"><CalendarDays size={16} /> {appt.date}</p>
+                  <p className="text-sm text-gray-600 inline-flex items-center gap-2"><Clock3 size={16} /> {appt.time}</p>
+                  <p className="text-sm text-gray-600">Mentor: {appt.mentor?.name} | Student: {appt.student?.name}</p>
+                </div>
+                <div className="text-sm flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white border"><CheckCircle size={14} /> {appt.status}</span>
+                  {(user?.role === 'mentor' || user?.role === 'admin') && appt.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1 border rounded" onClick={() => updateStatus(appt._id, 'approved')}>Approve</button>
+                      <button className="px-3 py-1 border rounded" onClick={() => updateStatus(appt._id, 'rejected')}>Reject</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

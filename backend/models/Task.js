@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 const submissionSchema = new mongoose.Schema(
   {
     student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    fileUrl: { type: String, required: true },
+    fileUrl: String,
+    submissionText: String,
     feedback: String,
     score: Number,
     status: { type: String, enum: ['pending', 'evaluated'], default: 'pending' },

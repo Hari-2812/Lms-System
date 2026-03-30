@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import DashboardHome from './pages/DashboardHome';
 import CourseDetails from './pages/CourseDetails';
+import CoursesPage from './pages/CoursesPage';
+import EnrolledCoursesPage from './pages/EnrolledCoursesPage';
 import TasksPage from './pages/TasksPage';
 import ChatPage from './pages/ChatPage';
 import AppointmentsPage from './pages/AppointmentsPage';
@@ -34,6 +36,8 @@ function AppRoutes() {
           }
         >
           <Route index element={<DashboardHome />} />
+          <Route path="courses" element={<CoursesPage />} />
+          <Route path="my-courses" element={<EnrolledCoursesPage />} />
           <Route path="courses/:id" element={<CourseDetails />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="chat" element={<ChatPage />} />

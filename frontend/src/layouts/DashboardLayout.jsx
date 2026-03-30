@@ -1,14 +1,33 @@
 import React, { useContext } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { BookOpen, CheckSquare, MessageSquare, Calendar, LogOut, Sun, Moon, HelpCircle, Briefcase } from 'lucide-react';
+import {
+  LayoutDashboard,
+  BookOpen,
+  GraduationCap,
+  CheckSquare,
+  MessageSquare,
+  Calendar,
+  LogOut,
+  Sun,
+  Moon,
+  HelpCircle,
+  Briefcase,
+} from 'lucide-react';
+
+const navLinkClass = ({ isActive }) =>
+  `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+    isActive
+      ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30'
+      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'
+  }`;
 
 const DashboardLayout = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [darkMode, setDarkMode] = React.useState(false);
 
-  const toggleSidebar = () => {
+  const toggleTheme = () => {
     if (darkMode) {
       document.documentElement.classList.remove('dark');
       setDarkMode(false);
@@ -25,23 +44,25 @@ const DashboardLayout = () => {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-dark-bg font-sans transition-colors duration-300">
-      <aside className="w-64 bg-white dark:bg-dark-surface border-r border-gray-200 dark:border-dark-border flex flex-col pt-6">
+      <aside className="w-72 bg-white dark:bg-dark-surface border-r border-gray-200 dark:border-dark-border flex flex-col pt-6">
         <div className="px-6 mb-8 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-white font-bold text-xl">L</div>
-          <span className="text-xl font-display font-bold text-gray-800 dark:text-white">LearnHub</span>
+          <span className="text-xl font-display font-bold text-gray-800 dark:text-white">LearnHub LMS</span>
         </div>
 
         <nav className="flex-1 px-4 space-y-2">
-          <NavLink to="/" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${isActive ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'}`}><BookOpen size={20} /> Dashboard</NavLink>
-          <NavLink to="/tasks" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${isActive ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'}`}><CheckSquare size={20} /> Tasks</NavLink>
-          <NavLink to="/chat" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${isActive ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'}`}><MessageSquare size={20} /> Chat</NavLink>
-          <NavLink to="/appointments" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${isActive ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'}`}><Calendar size={20} /> Appointments</NavLink>
-          <NavLink to="/tickets" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${isActive ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'}`}><HelpCircle size={20} /> Tickets</NavLink>
-          <NavLink to="/jobs" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${isActive ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'}`}><Briefcase size={20} /> Jobs</NavLink>
+          <NavLink to="/" className={navLinkClass}><LayoutDashboard size={20} /> Dashboard</NavLink>
+          <NavLink to="/courses" className={navLinkClass}><BookOpen size={20} /> Courses</NavLink>
+          <NavLink to="/my-courses" className={navLinkClass}><GraduationCap size={20} /> My Courses</NavLink>
+          <NavLink to="/tasks" className={navLinkClass}><CheckSquare size={20} /> Tasks</NavLink>
+          <NavLink to="/appointments" className={navLinkClass}><Calendar size={20} /> Appointments</NavLink>
+          <NavLink to="/tickets" className={navLinkClass}><HelpCircle size={20} /> Tickets</NavLink>
+          <NavLink to="/jobs" className={navLinkClass}><Briefcase size={20} /> Jobs</NavLink>
+          <NavLink to="/chat" className={navLinkClass}><MessageSquare size={20} /> Chat</NavLink>
         </nav>
 
         <div className="p-4 border-t border-gray-200 dark:border-dark-border space-y-2">
-          <button onClick={toggleSidebar} className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-border rounded-lg transition-colors">Theme {darkMode ? <Sun size={18} /> : <Moon size={18} />}</button>
+          <button onClick={toggleTheme} className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-border rounded-lg transition-colors">Theme {darkMode ? <Sun size={18} /> : <Moon size={18} />}</button>
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><LogOut size={18} /> Logout</button>
         </div>
       </aside>
