@@ -1,7 +1,8 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useCallback } from 'react';
 import { CalendarDays, Clock3, CheckCircle } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../lib/api';
+import { getCachedValue, setCachedValue } from '../lib/cache';
 
 const AppointmentsPage = () => {
   const { user } = useContext(AuthContext);
@@ -12,31 +13,31 @@ const AppointmentsPage = () => {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setFetching(true);
       setMessage('');
+      const cachedMentors = getCachedValue('mentors', 120_000);
       const [mentorRes, myAppointments] = await Promise.all([
-        api.get('/users/mentors'),
+        cachedMentors ? Promise.resolve({ data: cachedMentors }) : api.get('/users/mentors'),
         api.get('/appointments/my'),
       ]);
 
       const mentorsData = Array.isArray(mentorRes.data) ? mentorRes.data : [];
       setMentors(mentorsData);
+      setCachedValue('mentors', mentorsData);
       setAppointments(myAppointments.data || []);
-      if (!form.mentor && mentorsData[0]?._id) {
-        setForm((prev) => ({ ...prev, mentor: mentorsData[0]._id }));
-      }
+      setForm((prev) => (prev.mentor || !mentorsData[0]?._id ? prev : { ...prev, mentor: mentorsData[0]._id }));
     } catch (err) {
       setMessage(err.response?.data?.message || 'Failed to load appointments');
     } finally {
       setFetching(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const submitHandler = async (e) => {
     e.preventDefault();

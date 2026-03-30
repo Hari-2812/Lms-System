@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import http from 'http';
 import { Server } from 'socket.io';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 
 import authRoutes from './routes/authRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
@@ -33,6 +34,7 @@ const io = new Server(server, {
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(compression());
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',
   credentials: true,
@@ -40,6 +42,23 @@ app.use(cors({
 
 app.use((req, _res, next) => {
   req.io = io;
+  next();
+});
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; connect-src 'self' ws: wss: http: https:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-src https://www.youtube.com https://youtube.com;"
+  );
+
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 

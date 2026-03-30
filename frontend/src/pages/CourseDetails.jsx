@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, PlayCircle, Clock, BookOpen, Loader } from 'lucide-react';
 import api from '../lib/api';
 
+const CourseVideoPlayer = React.lazy(() => import('../components/CourseVideoPlayer'));
+
 const toEmbedUrl = (url = '') => {
   if (!url) return '';
   if (url.includes('youtube.com/watch?v=')) {
@@ -27,6 +29,7 @@ const CourseDetails = () => {
   const [error, setError] = useState(null);
   const [enrolling, setEnrolling] = useState(false);
   const [message, setMessage] = useState('');
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -79,7 +82,6 @@ const CourseDetails = () => {
 
   if (!course) return null;
   const playableUrl = toEmbedUrl(course.videoUrl || course.modules?.[0]?.videoUrl || '');
-  const isYouTubeVideo = playableUrl.includes('youtube.com/embed/');
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -102,18 +104,18 @@ const CourseDetails = () => {
             <h3 className="text-xl font-bold mb-4">Course Video</h3>
             {playableUrl ? (
               <div className="rounded-xl overflow-hidden border bg-black">
-                {isYouTubeVideo ? (
-                  <iframe
-                    title={`${course.title} video`}
-                    src={playableUrl}
-                    className="w-full aspect-video"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
+                {showVideoPlayer ? (
+                  <React.Suspense fallback={<div className="text-white text-center py-10">Loading video player...</div>}>
+                    <CourseVideoPlayer title={course.title} videoUrl={playableUrl} />
+                  </React.Suspense>
                 ) : (
-                  <video controls className="w-full aspect-video" src={playableUrl}>
-                    Your browser does not support the video tag.
-                  </video>
+                  <button
+                    type="button"
+                    onClick={() => setShowVideoPlayer(true)}
+                    className="w-full aspect-video flex items-center justify-center text-white bg-black/80 hover:bg-black transition"
+                  >
+                    ▶ Load Video Player
+                  </button>
                 )}
               </div>
             ) : (
