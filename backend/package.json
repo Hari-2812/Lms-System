@@ -5,7 +5,12 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+<<<<<<< HEAD
     "start": "nodemon server.js"
+=======
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+>>>>>>> 6942064 (initial commit)
   },
   "keywords": [],
   "author": "",
@@ -27,4 +32,8 @@
   "devDependencies": {
     "nodemon": "^3.1.14"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 6942064 (initial commit)
